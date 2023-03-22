@@ -1,22 +1,12 @@
 import re
+from http import HTTPStatus
 
 from flask import jsonify, request
 
-from . import app, db
+from . import PATTERN_SHORT_URL, PATTERN_URL, app, db
 from .error_handlers import InvalidAPIUsage
 from .models import URLMap
 from .views import get_unique_short_id
-
-PATTERN_URL = re.compile(
-    r'^(?:http|ftp)s?://'
-    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+'
-    r'(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
-    r'localhost|'
-    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
-    r'(?::\d+)?'
-    r'(?:/?|[/?]\S+)$', re.IGNORECASE
-)
-PATTERN_SHORT_URL = r'^[A-Za-z0-9]{1,16}$'
 
 
 @app.route('/api/id/', methods=['POST'])
@@ -41,12 +31,12 @@ def create_short_url():
     url_obj.from_dict(data)
     db.session.add(url_obj)
     db.session.commit()
-    return jsonify(url_obj.to_dict()), 201
+    return jsonify(url_obj.to_dict()), HTTPStatus.CREATED
 
 
 @app.route('/api/id/<string:short>/', methods=['GET'])
 def get_url(short):
     original_link = URLMap.query.filter_by(short=short).first()
     if original_link is None:
-        raise InvalidAPIUsage('Указанный id не найден', 404)
-    return jsonify({'url': original_link.original}), 200
+        raise InvalidAPIUsage('Указанный id не найден', HTTPStatus.NOT_FOUND)
+    return jsonify({'url': original_link.original}), HTTPStatus.OK
